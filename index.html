@@ -1,1 +1,780 @@
-﻿
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>多巴胺節奏</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; background: #050510; font-family: 'Arial Black', Arial, sans-serif; }
+#game-wrap {
+  width: 100vw; max-width: 390px; height: 100vh; max-height: 844px;
+  margin: 0 auto; position: relative; overflow: hidden; background: #07041a;
+}
+#bg-grad {
+  position: absolute; inset: 0; z-index: 0;
+  background: linear-gradient(160deg, #12003a 0%, #07041a 50%, #001a2a 100%);
+}
+#bg-grad.fever { animation: feverBg 0.6s ease infinite alternate; }
+@keyframes feverBg {
+  from { background: linear-gradient(160deg,#2a0050,#07041a,#001a2a); }
+  to   { background: linear-gradient(160deg,#350020,#07041a,#002a10); }
+}
+.bg-orb {
+  position: absolute; border-radius: 50%; filter: blur(40px);
+  animation: orbFloat ease-in-out infinite alternate; z-index: 1; opacity: 0.18;
+}
+@keyframes orbFloat {
+  from { transform: translateY(0) scale(1); }
+  to   { transform: translateY(-30px) scale(1.1); }
+}
+.star { position: absolute; border-radius: 50%; background: #fff; animation: twinkle linear infinite; z-index: 2; }
+@keyframes twinkle { 0%,100%{opacity:0.05}50%{opacity:0.7} }
+#hud {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 50;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 16px 8px;
+  background: rgba(0,0,0,0.55); backdrop-filter: blur(10px);
+}
+.hud-block { text-align: center; min-width: 70px; }
+.hud-label { font-size: 8px; color: rgba(255,255,255,0.3); letter-spacing: 2px; margin-bottom: 2px; }
+.hud-val { font-size: 26px; color: #fff; font-weight: 900; line-height: 1; }
+#combo-val { color: #ffd32a; transition: color 0.3s, text-shadow 0.3s; }
+#combo-val.fever { color: #ff6eb4; text-shadow: 0 0 20px #ff6eb4, 0 0 40px #ff6eb4; }
+#timer-bar-wrap {
+  position: absolute; top: 60px; left: 0; right: 0; height: 5px;
+  background: rgba(255,255,255,0.05); z-index: 50;
+}
+#timer-bar {
+  height: 100%; width: 100%;
+  background: linear-gradient(90deg, #a29bfe, #fd79a8, #ff9f43, #ffd32a);
+  transition: width 0.1s linear;
+}
+#fever-bar-wrap {
+  position: absolute; top: 65px; left: 0; right: 0; height: 3px;
+  background: rgba(255,255,255,0.03); z-index: 50;
+}
+#fever-bar {
+  height: 100%; width: 0%;
+  background: linear-gradient(90deg, #ff6eb4, #ffd32a, #0be881, #ff6eb4);
+  background-size: 300% 100%;
+  transition: width 0.12s ease;
+  animation: feverShimmer 1.2s linear infinite;
+}
+@keyframes feverShimmer { to { background-position: 300% 0; } }
+#fever-label {
+  position: absolute; top: 68px; right: 8px; z-index: 50;
+  font-size: 7px; color: rgba(255,255,255,0.2); letter-spacing: 2px;
+}
+#fever-overlay {
+  position: absolute; inset: 0; z-index: 45; pointer-events: none;
+  opacity: 0; transition: opacity 0.4s;
+}
+#fever-overlay.active {
+  opacity: 1;
+  background: radial-gradient(ellipse at 50% 60%, rgba(255,110,180,0.12) 0%, rgba(162,155,254,0.06) 50%, transparent 80%);
+}
+#fever-text {
+  position: absolute; top: 20%; left: 50%; transform: translateX(-50%);
+  font-size: 26px; font-weight: 900; color: #fff;
+  text-shadow: 0 0 20px #ff6eb4, 0 0 40px #ffd32a, 0 0 80px #ff6eb4;
+  z-index: 46; pointer-events: none; white-space: nowrap;
+  display: none; letter-spacing: 4px;
+  animation: feverPulse 0.4s ease infinite alternate;
+}
+@keyframes feverPulse {
+  from { transform: translateX(-50%) scale(1); }
+  to   { transform: translateX(-50%) scale(1.08); }
+}
+#lanes-wrap {
+  position: absolute; top: 68px; left: 0; right: 0; bottom: 110px;
+  display: flex; z-index: 10;
+}
+.lane { flex: 1; position: relative; overflow: hidden; border-right: 1px solid rgba(255,255,255,0.06); }
+.lane:last-child { border-right: none; }
+.lane-light {
+  position: absolute; bottom: 0; left: 0; right: 0; height: 100%;
+  opacity: 0; pointer-events: none; transition: opacity 0.1s;
+}
+#judge-line {
+  position: absolute; bottom: 110px; left: 0; right: 0; height: 4px;
+  z-index: 20; pointer-events: none;
+}
+#judge-line-bar {
+  width: 100%; height: 100%;
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.5) 10%, #fff 30%, #fff 70%, rgba(255,255,255,0.5) 90%, transparent 100%);
+  box-shadow: 0 0 16px rgba(255,255,255,0.7), 0 0 32px rgba(255,255,255,0.3);
+}
+#judge-line.fever #judge-line-bar {
+  background: linear-gradient(90deg, transparent, #ff6eb4, #ffd32a, #0be881, #48dbfb, #ff6eb4, transparent);
+  box-shadow: 0 0 24px #ff6eb4, 0 0 48px rgba(255,110,180,0.4);
+}
+#touch-area {
+  position: absolute; bottom: 0; left: 0; right: 0; height: 110px;
+  display: flex; z-index: 40;
+  background: rgba(0,0,0,0.45); backdrop-filter: blur(6px);
+  border-top: 1px solid rgba(255,255,255,0.04);
+}
+.touch-btn {
+  flex: 1; position: relative; overflow: hidden;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+  user-select: none; border-right: 1px solid rgba(0,0,0,0.3);
+}
+.touch-btn:last-child { border-right: none; }
+.touch-btn .btn-color {
+  position: absolute; inset: 8px 6px; border-radius: 12px;
+  opacity: 0.55; transition: opacity 0.08s, transform 0.08s, box-shadow 0.08s;
+}
+.touch-btn.pressing .btn-color {
+  opacity: 1; transform: scale(0.94);
+  box-shadow: 0 0 20px var(--lane-color), 0 0 40px var(--lane-color);
+}
+
+/* ── 音符 ── */
+.note-tap {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  border-radius: 10px; z-index: 15; pointer-events: none;
+  width: 56px; height: 22px;
+  box-shadow: 0 0 18px var(--c), 0 0 6px var(--c);
+}
+.note-tap::after {
+  content: ''; position: absolute; inset: -2px;
+  border-radius: 12px; border: 2px solid rgba(255,255,255,0.5);
+}
+
+/* Hold 音符：head在下（先到判定線），tail在上（後到） */
+.note-hold {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  width: 56px; z-index: 15; pointer-events: none;
+  display: flex; flex-direction: column; align-items: center;
+}
+.hold-tail { width: 100%; height: 22px; border-radius: 10px 10px 4px 4px; flex-shrink: 0; opacity: 0.7; }
+.hold-body { width: 40%; flex: 1; opacity: 0.4; }
+.hold-head { width: 100%; height: 22px; border-radius: 4px 4px 10px 10px; flex-shrink: 0;
+  box-shadow: 0 0 16px var(--c); }
+/* 按住中：head發光 */
+.note-hold.holding .hold-head { box-shadow: 0 0 28px var(--c), 0 0 56px var(--c); }
+.note-hold.holding .hold-body { opacity: 0.8; }
+
+/* Slide 音符：橫跨兩軌道，顯示方向箭頭 */
+.note-slide {
+  position: absolute; z-index: 15; pointer-events: none;
+  height: 22px; border-radius: 10px;
+  box-shadow: 0 0 18px var(--c);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; color: rgba(255,255,255,0.8); font-weight: 900;
+  letter-spacing: 4px;
+}
+.note-slide::after {
+  content: ''; position: absolute; inset: -2px;
+  border-radius: 12px; border: 2px solid rgba(255,255,255,0.4);
+}
+/* slide 被啟動後發光 */
+.note-slide.activated {
+  box-shadow: 0 0 30px var(--c), 0 0 60px var(--c);
+  border-color: #fff;
+}
+
+/* ── 特效 ── */
+.judge-fx {
+  position: absolute; z-index: 35; pointer-events: none;
+  font-size: 13px; font-weight: 900; letter-spacing: 1px;
+  transform: translateX(-50%);
+  animation: judgePop 0.65s ease forwards; white-space: nowrap;
+}
+@keyframes judgePop {
+  0%  { opacity:1; transform:translateX(-50%) translateY(0) scale(1.4); }
+  100%{ opacity:0; transform:translateX(-50%) translateY(-55px) scale(0.8); }
+}
+.burst-ring {
+  position: absolute; border-radius: 50%; z-index: 28; pointer-events: none;
+  transform: translate(-50%,-50%);
+  animation: burstRing 0.4s ease-out forwards;
+}
+@keyframes burstRing {
+  0%  { width:8px; height:8px; opacity:1; }
+  100%{ width:110px; height:110px; opacity:0; }
+}
+.burst-ring2 {
+  position: absolute; border-radius: 50%; z-index: 27; pointer-events: none;
+  transform: translate(-50%,-50%);
+  animation: burstRing2 0.55s ease-out forwards;
+}
+@keyframes burstRing2 {
+  0%  { width:8px; height:8px; opacity:0.6; }
+  100%{ width:160px; height:160px; opacity:0; }
+}
+.frag {
+  position: absolute; border-radius: 50%; z-index: 29; pointer-events: none;
+  animation: fragFly ease-out forwards;
+}
+@keyframes fragFly {
+  0%  { opacity:1; transform:translate(0,0) scale(1); }
+  100%{ opacity:0; transform:var(--t) scale(0); }
+}
+#combo-msg {
+  position: absolute; top: 28%; left: 50%; transform: translateX(-50%);
+  font-size: 18px; font-weight: 900; color: #ffd32a;
+  text-shadow: 0 0 24px #ffd32a; z-index: 48;
+  pointer-events: none; white-space: nowrap; display: none;
+}
+@keyframes comboPop {
+  0%  { opacity:1; transform:translateX(-50%) scale(1.5); }
+  100%{ opacity:0; transform:translateX(-50%) scale(1) translateY(-24px); }
+}
+#flash { position: absolute; inset: 0; z-index: 44; pointer-events: none; opacity: 0; }
+#overlay {
+  position: absolute; inset: 0; z-index: 60;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 14px; background: rgba(3,1,18,0.92); backdrop-filter: blur(16px);
+}
+#overlay h1 {
+  font-size: 28px; color: #fff; font-weight: 900; text-align: center; line-height: 1.4;
+  text-shadow: 0 0 40px #a29bfe, 0 0 80px #fd79a8;
+}
+#overlay p { font-size: 12px; color: rgba(255,255,255,0.4); text-align: center; line-height: 2.4; }
+.legend { display: flex; gap: 20px; }
+.leg-item { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.leg-tap  { width: 36px; height: 14px; border-radius: 4px; background: #ff6eb4; box-shadow: 0 0 10px #ff6eb4; }
+.leg-hold { width: 36px; height: 48px; border-radius: 4px; background: linear-gradient(180deg,#48dbfb44,#48dbfb); box-shadow: 0 0 10px #48dbfb; }
+.leg-slide{ width: 72px; height: 14px; border-radius: 4px; background: linear-gradient(90deg,#a29bfe,#ffd32a); box-shadow: 0 0 10px #a29bfe; }
+.leg-txt { font-size: 9px; color: rgba(255,255,255,0.35); letter-spacing: 1px; }
+.final-score { font-size: 60px; font-weight: 900; color: #ffd32a; text-shadow: 0 0 40px #ffd32a88; line-height: 1; }
+.final-label { font-size: 9px; color: rgba(255,255,255,0.2); letter-spacing: 3px; }
+.start-btn {
+  background: linear-gradient(135deg, #a29bfe, #fd79a8, #ff9f43);
+  color: #fff; border: none; font-size: 16px; font-weight: 900;
+  padding: 15px 52px; border-radius: 50px; cursor: pointer; letter-spacing: 1px;
+  box-shadow: 0 6px 30px rgba(162,155,254,0.5); margin-top: 8px;
+}
+.start-btn:active { transform: scale(0.96); }
+</style>
+</head>
+<body>
+<div id="game-wrap">
+  <div id="bg-grad"></div>
+  <div id="hud">
+    <div class="hud-block"><div class="hud-label">SCORE</div><div class="hud-val" id="score-val">0</div></div>
+    <div class="hud-block"><div class="hud-label">COMBO</div><div class="hud-val" id="combo-val">0</div></div>
+    <div class="hud-block"><div class="hud-label">TIME</div><div class="hud-val" id="timer-val">40</div></div>
+  </div>
+  <div id="timer-bar-wrap"><div id="timer-bar"></div></div>
+  <div id="fever-bar-wrap"><div id="fever-bar"></div></div>
+  <div id="fever-label">FEVER</div>
+  <div id="lanes-wrap">
+    <div class="lane" id="lane-0"><div class="lane-light" id="ll-0"></div></div>
+    <div class="lane" id="lane-1"><div class="lane-light" id="ll-1"></div></div>
+    <div class="lane" id="lane-2"><div class="lane-light" id="ll-2"></div></div>
+    <div class="lane" id="lane-3"><div class="lane-light" id="ll-3"></div></div>
+  </div>
+  <div id="judge-line"><div id="judge-line-bar"></div></div>
+  <div id="fever-overlay"></div>
+  <div id="fever-text">⚡ FEVER ⚡</div>
+  <div id="combo-msg"></div>
+  <div id="flash"></div>
+  <div id="touch-area">
+    <div class="touch-btn" id="tb-0" style="--lane-color:#ff6eb4"><div class="btn-color" style="background:linear-gradient(180deg,#ff6eb4,#c0195e)"></div></div>
+    <div class="touch-btn" id="tb-1" style="--lane-color:#a29bfe"><div class="btn-color" style="background:linear-gradient(180deg,#a29bfe,#5f52d9)"></div></div>
+    <div class="touch-btn" id="tb-2" style="--lane-color:#0be881"><div class="btn-color" style="background:linear-gradient(180deg,#0be881,#059c51)"></div></div>
+    <div class="touch-btn" id="tb-3" style="--lane-color:#ffd32a"><div class="btn-color" style="background:linear-gradient(180deg,#ffd32a,#c8a800)"></div></div>
+  </div>
+  <div id="overlay">
+    <h1>⚡ 多巴胺<br>節奏挑戰</h1>
+    <div class="legend">
+      <div class="leg-item"><div class="leg-tap"></div><div class="leg-txt">點擊</div></div>
+      <div class="leg-item"><div class="leg-hold"></div><div class="leg-txt">長按</div></div>
+      <div class="leg-item"><div class="leg-slide"></div><div class="leg-txt">滑動</div></div>
+    </div>
+    <p>音符尾巴碰到白線時操作<br>長按要撐到長條結束才算分<br>滑動要從起點滑到終點<br>累積COMBO → FEVER x2！</p>
+    <button class="start-btn" id="start-btn">▶ 開始</button>
+  </div>
+</div>
+<script>
+(function(){
+  const wrap      = document.getElementById('game-wrap');
+  const scoreEl   = document.getElementById('score-val');
+  const comboEl   = document.getElementById('combo-val');
+  const timerEl   = document.getElementById('timer-val');
+  const timerBar  = document.getElementById('timer-bar');
+  const feverBar  = document.getElementById('fever-bar');
+  const overlay   = document.getElementById('overlay');
+  const comboMsg  = document.getElementById('combo-msg');
+  const flashEl   = document.getElementById('flash');
+  const feverOvl  = document.getElementById('fever-overlay');
+  const feverTxt  = document.getElementById('fever-text');
+  const bgGrad    = document.getElementById('bg-grad');
+  const judgeLine = document.getElementById('judge-line');
+
+  const TOTAL_TIME = 40;
+  const LANE_COUNT = 4;
+  const NOTE_W = 56;
+  const HEAD_H = 22;
+  const LANE_COLORS = ['#ff6eb4','#a29bfe','#0be881','#ffd32a'];
+  const LANE_GLOWS  = ['rgba(255,110,180,0.5)','rgba(162,155,254,0.5)','rgba(11,232,129,0.5)','rgba(255,211,42,0.5)'];
+
+  // 背景裝飾
+  [{color:'#ff6eb4',w:200,h:200,left:'10%',top:'20%',dur:'7s'},
+   {color:'#a29bfe',w:180,h:180,left:'60%',top:'10%',dur:'9s'},
+   {color:'#0be881',w:160,h:160,left:'30%',top:'50%',dur:'11s'},
+   {color:'#ffd32a',w:140,h:140,left:'75%',top:'55%',dur:'8s'},
+   {color:'#48dbfb',w:120,h:120,left:'5%', top:'65%',dur:'10s'}
+  ].forEach(o=>{
+    const el=document.createElement('div'); el.className='bg-orb';
+    el.style.cssText=`width:${o.w}px;height:${o.h}px;left:${o.left};top:${o.top};background:${o.color};animation-duration:${o.dur};animation-delay:${Math.random()*4}s`;
+    wrap.appendChild(el);
+  });
+  for(let i=0;i<50;i++){
+    const s=document.createElement('div'); s.className='star';
+    const sz=0.8+Math.random()*2;
+    s.style.cssText=`width:${sz}px;height:${sz}px;left:${Math.random()*100}%;top:${Math.random()*75}%;animation-duration:${1.5+Math.random()*3}s;animation-delay:${Math.random()*5}s`;
+    wrap.appendChild(s);
+  }
+
+  let score=0,combo=0,timeLeft=TOTAL_TIME,running=false;
+  const laneCooldown=[0,0,0,0]; // 每條軌道冷卻結束時間戳
+  const laneOccupied=[false,false,false,false]; // 該軌道是否有 hold/slide 進行中
+  let feverMeter=0,inFever=false,feverTO=null;
+  let spawnTimer=null,countTimer=null;
+  let activeNotes=[];
+  let lanePressed=[false,false,false,false];
+  let rafId=null,lastTs=null,speed=1;
+  const activeTouches={};
+
+  function getLaneX(i){ const lw=wrap.offsetWidth/LANE_COUNT; return lw*i+lw/2; }
+  function getJudgeY(){ return wrap.offsetHeight-110; }
+  function getLaneFromX(cx){
+    const wr=wrap.getBoundingClientRect();
+    return Math.min(LANE_COUNT-1,Math.max(0,Math.floor((cx-wr.left)/(wrap.offsetWidth/LANE_COUNT))));
+  }
+  function getLanesTop(){ return 68; }
+
+  // ── 音符生成 ──
+  const NOTE_TYPES=['tap','tap','tap','tap','tap','hold','slide'];
+  const lastSpawnType=[null,null,null,null];
+
+  function spawnNote(){
+    if(!running) return;
+    let lane=Math.floor(Math.random()*LANE_COUNT);
+    const type=NOTE_TYPES[Math.floor(Math.random()*NOTE_TYPES.length)];
+    // 該軌道有 hold/slide 進行中 → 換一條空的軌道
+    if(laneOccupied[lane]){
+      const free=[0,1,2,3].filter(i=>!laneOccupied[i]);
+      if(free.length===0) return; // 全部佔用就跳過
+      lane=free[Math.floor(Math.random()*free.length)];
+    }
+    // 同軌道連續兩個 hold → 強制 tap
+    const resolvedType=(type==='hold'&&lastSpawnType[lane]==='hold')?'tap':type;
+    lastSpawnType[lane]=resolvedType;
+    const color=LANE_COLORS[lane];
+    const glow=LANE_GLOWS[lane];
+    const laneEl=document.getElementById('lane-'+lane);
+
+    if(resolvedType==='tap'){
+      const el=document.createElement('div');
+      el.className='note-tap';
+      el.style.cssText=`background:${color};--c:${glow};top:-30px`;
+      laneEl.appendChild(el);
+      // tailY = top + HEAD_H，tailY到判定線時觸發
+      activeNotes.push({el,lane,type:resolvedType,top:-30,done:false});
+
+    } else if(resolvedType==='hold'){
+      // 長條加長：120~220px
+      const holdH=120+Math.floor(Math.random()*100);
+      const totalH=holdH+HEAD_H; // tail(22) + body + head(22)
+      const el=document.createElement('div');
+      el.className='note-hold';
+      el.style.cssText=`top:${-(totalH+30)}px;--c:${glow};height:${totalH}px`;
+
+      // 由上到下：tail（尾巴，最後到判定線）→ body → head（頭，最先到判定線）
+      const tail=document.createElement('div'); tail.className='hold-tail';
+      tail.style.background=color;
+      const body=document.createElement('div'); body.className='hold-body';
+      body.style.background=color;
+      const head=document.createElement('div'); head.className='hold-head';
+      head.style.cssText=`background:${color};--c:${glow}`;
+
+      el.appendChild(tail); el.appendChild(body); el.appendChild(head);
+      laneEl.appendChild(el);
+
+      laneOccupied[lane]=true;
+      activeNotes.push({
+        el,lane,type:resolvedType,
+        top:-(totalH+30),
+        totalH,holdH,
+        done:false,
+        state:'waiting',
+      });
+
+    } else { // slide
+      laneOccupied[lane]=true;
+      const targetLane=lane===0?1:lane===LANE_COUNT-1?LANE_COUNT-2:(Math.random()<0.5?lane-1:lane+1);
+      const sx=getLaneX(lane), ex=getLaneX(targetLane);
+      const noteW=Math.abs(ex-sx)+NOTE_W;
+      const leftX=Math.min(sx,ex)-NOTE_W/2;
+      const arrow=targetLane>lane?'→':'←';
+      const el=document.createElement('div');
+      el.className='note-slide';
+      el.style.cssText=`width:${noteW}px;background:linear-gradient(90deg,${LANE_COLORS[lane]},${LANE_COLORS[targetLane]});left:${leftX}px;top:-30px;--c:${glow}`;
+      el.textContent=arrow;
+      wrap.appendChild(el);
+
+      laneOccupied[lane]=true;
+      activeNotes.push({
+        el,lane,targetLane,type:resolvedType,
+        top:-30,
+        done:false,
+        isWrap:true,
+        state:'waiting',
+      });
+    }
+  }
+
+  // ── Game Loop ──
+  function gameLoop(ts){
+    if(!running){ rafId=null; return; }
+    if(!lastTs) lastTs=ts;
+    const dt=Math.min((ts-lastTs)/1000,0.05);
+    lastTs=ts;
+
+    const elapsed=TOTAL_TIME-timeLeft;
+    speed=1+elapsed*0.022;
+    if(inFever) speed*=1.15;
+
+    const judgeY=getJudgeY();
+    const noteSpeed=300*speed;
+    const lanesTop=getLanesTop();
+
+    for(let i=activeNotes.length-1;i>=0;i--){
+      const n=activeNotes[i];
+      if(n.done){ activeNotes.splice(i,1); continue; }
+
+      n.top+=noteSpeed*dt;
+
+      if(n.type==='tap'){
+        n.el.style.top=n.top+'px';
+        const tailY=n.top+HEAD_H; // 音符底部
+        if(tailY>judgeY+90){ n.el.remove(); n.done=true; breakCombo(); }
+
+      } else if(n.type==='hold'){
+        n.el.style.top=n.top+'px';
+        // headTailY = top + totalH（head的底部，最先抵達判定線）
+        const headTailY=n.top+n.totalH;
+        // tailTopY = top + HEAD_H（tail的底部，最後抵達判定線）
+        const tailBottomY=n.top+HEAD_H;
+
+        if(n.state==='waiting'){
+          // 頭到判定線範圍內，可以按
+          if(headTailY>=judgeY-60 && headTailY<=judgeY+80){
+            if(lanePressed[n.lane] && Date.now()>laneCooldown[n.lane]){
+              n.state='pressing';
+              n.el.classList.add('holding');
+              lightLane(n.lane);
+            }
+          }
+          // 頭已過線太遠還沒按 → miss
+          if(headTailY>judgeY+90 && n.state==='waiting'){
+            n.el.remove(); n.done=true; breakCombo();
+          }
+        } else if(n.state==='pressing'){
+          // 按住中：持續給分
+          if(lanePressed[n.lane]){
+            n.holdAccum=(n.holdAccum||0)+dt*60;
+            if(n.holdAccum>=5){ addScore(5,n.lane); addFever(2); n.holdAccum-=5; lightLane(n.lane); }
+            // tail到判定線 → 完成
+            if(tailBottomY>=judgeY-10){
+              hitHoldComplete(n);
+            }
+          } else {
+            // 中途放手 → miss（tail還沒到）
+            if(tailBottomY<judgeY-10){
+              n.el.remove(); n.done=true;
+              laneOccupied[n.lane]=false;
+              laneCooldown[n.lane]=Date.now()+200;
+              breakCombo();
+            }
+          }
+        }
+
+        // 整條過了判定線還沒完成 → miss
+        if(!n.done && n.top>judgeY+90){
+          n.el.remove(); n.done=true;
+          laneOccupied[n.lane]=false;
+          breakCombo();
+        }
+
+      } else { // slide
+        const absTop=lanesTop+n.top;
+        n.el.style.top=absTop+'px';
+        const tailY=absTop+HEAD_H;
+
+        if(n.state==='waiting'){
+          // 音符尾巴到判定線 → 可以開始
+          if(tailY>=judgeY-60 && tailY<=judgeY+80){
+            if(lanePressed[n.lane] && Date.now()>laneCooldown[n.lane]){
+              n.state='started';
+              n.el.classList.add('activated');
+            }
+          }
+          if(tailY>judgeY+90){ n.el.remove(); n.done=true; breakCombo(); }
+        } else if(n.state==='started'){
+          // 等待滑到目標軌道
+          if(lanePressed[n.targetLane]){
+            hitSlideComplete(n);
+          }
+          // 超過太多還沒完成 → miss
+          if(tailY>judgeY+160){
+            n.el.remove(); n.done=true;
+            laneOccupied[n.lane]=false;
+            laneCooldown[n.lane]=Date.now()+200;
+            breakCombo();
+          }
+        }
+      }
+    }
+    rafId=requestAnimationFrame(gameLoop);
+  }
+
+  function hitHoldComplete(n){
+    if(n.done) return;
+    n.done=true; n.el.remove();
+    laneOccupied[n.lane]=false;
+    laneCooldown[n.lane]=Date.now()+200;
+    addScore(100,n.lane);
+    addFever(15);
+    showJudge(n.lane,'PERFECT');
+    spawnBurst(getLaneX(n.lane),getJudgeY(),LANE_COLORS[n.lane]);
+    lightLane(n.lane);
+  }
+
+  function hitSlideComplete(n){
+    if(n.done) return;
+    n.done=true; n.el.remove();
+    laneOccupied[n.lane]=false;
+    laneCooldown[n.lane]=Date.now()+200;
+    laneCooldown[n.targetLane]=Date.now()+200;
+    addScore(100,n.targetLane);
+    addFever(15);
+    showJudge(n.targetLane,'SLIDE!');
+    spawnBurst(getLaneX(n.targetLane),getJudgeY(),LANE_COLORS[n.targetLane]);
+    lightLane(n.targetLane);
+  }
+
+  // ── Tap 判定（touchstart觸發）──
+  function tryTap(laneIdx){
+    const judgeY=getJudgeY();
+    const lanesTop=getLanesTop();
+    let best=null, bestDist=999;
+
+    for(const n of activeNotes){
+      if(n.done) continue;
+      if(n.type!=='tap') continue;
+      if(n.lane!==laneIdx) continue;
+      const tailY=n.top+HEAD_H;
+      const dist=Math.abs(tailY-judgeY);
+      if(dist<bestDist){ bestDist=dist; best=n; }
+    }
+    if(!best||bestDist>100) return;
+
+    const q=bestDist<28?'PERFECT':bestDist<60?'GOOD':'OK';
+    const pts=q==='PERFECT'?100:q==='GOOD'?60:25;
+    best.done=true; best.el.remove();
+    laneCooldown[laneIdx]=Date.now()+200;
+    addScore(pts,laneIdx);
+    addFever(q==='PERFECT'?15:q==='GOOD'?8:3);
+    showJudge(laneIdx,q);
+    spawnBurst(getLaneX(laneIdx),judgeY,LANE_COLORS[laneIdx]);
+    lightLane(laneIdx);
+  }
+
+  function addScore(pts,laneIdx){
+    const mul=inFever?2:1;
+    score+=pts*mul; combo++;
+    scoreEl.textContent=score; comboEl.textContent=combo;
+    if(combo>0&&combo%10===0) showCombo('🔥 '+combo+' COMBO!');
+  }
+  function breakCombo(){
+    if(combo===0) return;
+    combo=0; comboEl.textContent='0';
+    feverMeter=Math.max(0,feverMeter-15); updateFeverBar();
+  }
+  function addFever(amt){
+    if(inFever) return;
+    feverMeter=Math.min(100,feverMeter+amt); updateFeverBar();
+    if(feverMeter>=100) triggerFever();
+  }
+  function updateFeverBar(){ feverBar.style.width=feverMeter+'%'; }
+  function triggerFever(){
+    inFever=true; feverMeter=0; updateFeverBar();
+    feverOvl.classList.add('active'); feverTxt.style.display='block';
+    bgGrad.classList.add('fever'); judgeLine.classList.add('fever');
+    comboEl.classList.add('fever');
+    flashEl.style.background='rgba(255,110,180,0.3)';
+    flashEl.style.opacity='1'; setTimeout(()=>flashEl.style.opacity='0',200);
+    feverTO=setTimeout(endFever,8000);
+  }
+  function endFever(){
+    inFever=false;
+    feverOvl.classList.remove('active'); feverTxt.style.display='none';
+    bgGrad.classList.remove('fever'); judgeLine.classList.remove('fever');
+    comboEl.classList.remove('fever');
+  }
+
+  // ── 特效 ──
+  function showJudge(laneIdx,text){
+    const x=getLaneX(laneIdx), y=getJudgeY()-35;
+    const el=document.createElement('div'); el.className='judge-fx';
+    const colors={PERFECT:'#ffd32a',GOOD:'#0be881',OK:'#a29bfe','SLIDE!':'#48dbfb'};
+    el.style.cssText=`left:${x}px;top:${y}px;color:${colors[text]||'#fff'}`;
+    el.textContent=text; wrap.appendChild(el);
+    setTimeout(()=>el.remove(),700);
+  }
+  function spawnBurst(x,y,color){
+    [['burst-ring',0],['burst-ring2',80]].forEach(([cls,delay])=>{
+      setTimeout(()=>{
+        const r=document.createElement('div'); r.className=cls;
+        r.style.cssText=`left:${x}px;top:${y}px;border:2px solid ${color}`;
+        wrap.appendChild(r); setTimeout(()=>r.remove(),600);
+      },delay);
+    });
+    for(let i=0;i<8;i++){
+      const f=document.createElement('div'); f.className='frag';
+      const sz=3+Math.random()*7;
+      const angle=(Math.PI*2/8)*i+Math.random()*0.4;
+      const dist=25+Math.random()*50;
+      const t=`translate(${(Math.cos(angle)*dist).toFixed(1)}px,${(Math.sin(angle)*dist).toFixed(1)}px)`;
+      f.style.cssText=`width:${sz}px;height:${sz}px;background:${color};left:${x}px;top:${y}px;--t:${t};animation-duration:${0.3+Math.random()*0.2}s;transform:translate(-50%,-50%)`;
+      wrap.appendChild(f); setTimeout(()=>f.remove(),600);
+    }
+  }
+  function lightLane(i){
+    const ll=document.getElementById('ll-'+i);
+    ll.style.background=`linear-gradient(0deg,${LANE_GLOWS[i]},transparent 60%)`;
+    ll.style.opacity='1'; setTimeout(()=>ll.style.opacity='0',200);
+  }
+  function showCombo(text){
+    comboMsg.textContent=text; comboMsg.style.display='block';
+    comboMsg.style.animation='none';
+    requestAnimationFrame(()=>{ comboMsg.style.animation='comboPop 1s ease forwards'; });
+    setTimeout(()=>comboMsg.style.display='none',1050);
+  }
+
+  // ── 觸控 ──
+  function onPressLane(laneIdx){
+    lanePressed[laneIdx]=true;
+    document.getElementById('tb-'+laneIdx).classList.add('pressing');
+    if(running) tryTap(laneIdx);
+  }
+  function onReleaseLane(laneIdx){
+    lanePressed[laneIdx]=false;
+    document.getElementById('tb-'+laneIdx).classList.remove('pressing');
+  }
+
+  wrap.addEventListener('touchstart',e=>{
+    e.preventDefault();
+    for(const t of e.changedTouches){
+      const wr=wrap.getBoundingClientRect();
+      if(t.clientY>wr.top+getJudgeY()-40){
+        const lane=getLaneFromX(t.clientX);
+        activeTouches[t.identifier]=lane;
+        onPressLane(lane);
+      }
+    }
+  },{passive:false});
+
+  wrap.addEventListener('touchmove',e=>{
+    e.preventDefault();
+    for(const t of e.changedTouches){
+      if(activeTouches[t.identifier]===undefined) continue;
+      const nl=getLaneFromX(t.clientX), ol=activeTouches[t.identifier];
+      if(nl!==ol){
+        onReleaseLane(ol);
+        onPressLane(nl);
+        activeTouches[t.identifier]=nl;
+      }
+    }
+  },{passive:false});
+
+  wrap.addEventListener('touchend',e=>{
+    e.preventDefault();
+    for(const t of e.changedTouches){
+      const lane=activeTouches[t.identifier];
+      if(lane!==undefined){ onReleaseLane(lane); delete activeTouches[t.identifier]; }
+    }
+  },{passive:false});
+
+  // 桌面測試
+  let mDown=false,mLane=-1;
+  wrap.addEventListener('mousedown',e=>{
+    const wr=wrap.getBoundingClientRect();
+    if(e.clientY>wr.top+getJudgeY()-40){
+      mDown=true; mLane=getLaneFromX(e.clientX); onPressLane(mLane);
+    }
+  });
+  wrap.addEventListener('mousemove',e=>{
+    if(!mDown) return;
+    const nl=getLaneFromX(e.clientX);
+    if(nl!==mLane){ if(mLane>=0) onReleaseLane(mLane); mLane=nl; onPressLane(nl); }
+  });
+  wrap.addEventListener('mouseup',()=>{
+    if(mLane>=0) onReleaseLane(mLane); mDown=false; mLane=-1;
+  });
+
+  // ── 流程 ──
+  function spawnLoop(){
+    if(!running) return;
+    spawnNote();
+    if(Math.random()<0.25) setTimeout(()=>{ if(running) spawnNote(); },110);
+    const elapsed=TOTAL_TIME-timeLeft;
+    const delay=Math.max(320,900-elapsed*12)+Math.random()*180;
+    spawnTimer=setTimeout(spawnLoop,delay);
+  }
+
+  function startGame(){
+    score=0; combo=0; timeLeft=TOTAL_TIME; feverMeter=0; inFever=false; speed=1; running=true;
+    activeNotes=[]; lanePressed=[false,false,false,false];
+    for(let i=0;i<4;i++){ laneCooldown[i]=0; laneOccupied[i]=false; lastSpawnType[i]=null; }
+    scoreEl.textContent='0'; comboEl.textContent='0'; timerEl.textContent=TOTAL_TIME;
+    timerBar.style.width='100%'; feverBar.style.width='0%';
+    wrap.querySelectorAll('.note-tap,.note-hold,.note-slide,.judge-fx,.burst-ring,.burst-ring2,.frag').forEach(e=>e.remove());
+    feverOvl.classList.remove('active'); feverTxt.style.display='none';
+    bgGrad.classList.remove('fever'); judgeLine.classList.remove('fever');
+    comboEl.classList.remove('fever');
+    overlay.style.display='none'; lastTs=null;
+    spawnLoop(); countLoop();
+    rafId=requestAnimationFrame(gameLoop);
+  }
+
+  function countLoop(){
+    countTimer=setInterval(()=>{
+      if(!running) return;
+      timeLeft-=0.1;
+      timerBar.style.width=(Math.max(0,timeLeft/TOTAL_TIME)*100)+'%';
+      timerEl.textContent=Math.ceil(timeLeft);
+      if(timeLeft<=0){ clearInterval(countTimer); endGame(); }
+    },100);
+  }
+
+  function endGame(){
+    running=false;
+    clearTimeout(spawnTimer); clearTimeout(feverTO); clearInterval(countTimer);
+    if(rafId) cancelAnimationFrame(rafId);
+    activeNotes.forEach(n=>{ if(n.el&&n.el.parentNode) n.el.remove(); });
+    activeNotes=[]; endFever();
+    overlay.innerHTML=`
+      <h1>⚡ 挑戰結束！</h1>
+      <div class="final-score">${score}</div>
+      <div class="final-label">DOPAMINE SCORE</div>
+      <p style="margin-top:6px">最高連擊 ${combo} COMBO</p>
+      <button class="start-btn" id="restart-btn">↺ 再玩一次</button>
+    `;
+    overlay.style.display='flex';
+    document.getElementById('restart-btn').addEventListener('click',startGame);
+    document.getElementById('restart-btn').addEventListener('touchend',function(e){e.preventDefault();startGame();},{passive:false});
+  }
+
+  document.getElementById('start-btn').addEventListener('click',startGame);
+  document.getElementById('start-btn').addEventListener('touchend',function(e){e.preventDefault();startGame();},{passive:false});
+})();
+</script>
+</body>
+</html>
