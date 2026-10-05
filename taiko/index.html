@@ -4,6 +4,63 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <title>咚咔！太鼓挑戰</title>
+<script>
+/* ── 強制用外部瀏覽器開啟 ── */
+(function(){
+  var ua=navigator.userAgent||'', url=location.href;
+  var isIOS=/iPhone|iPad|iPod/i.test(ua), isAndroid=/Android/i.test(ua);
+  // LINE：加上 openExternalBrowser=1，LINE 會自動跳外部瀏覽器
+  if(/\bLine\//i.test(ua)){
+    if(!/[?&]openExternalBrowser=1/.test(url)){
+      location.replace(url+(url.indexOf('?')>-1?'&':'?')+'openExternalBrowser=1');
+    }
+    window.__IN_APP__=true;
+  }else if(/FBAN|FBAV|FB_IAB|FBIOS|Instagram|Messenger|MicroMessenger|KAKAOTALK|Threads|Barcelona/i.test(ua) || (isAndroid && /; wv\)/.test(ua))){
+    window.__IN_APP__=true;
+    // Android：直接叫 Chrome 開
+    if(isAndroid){
+      location.href='intent://'+location.host+location.pathname+location.search+'#Intent;scheme=https;package=com.android.chrome;S.browser_fallback_url='+encodeURIComponent(url)+';end';
+    }
+  }
+  if(!window.__IN_APP__) return;
+  // 若沒跳走，顯示引導畫面擋住遊戲
+  document.addEventListener('DOMContentLoaded',function(){
+    var cleanUrl=url.replace(/[?&]openExternalBrowser=1/,'');
+    var box=document.createElement('div');
+    box.id='inapp-guard';
+    box.innerHTML=
+      '<div class="ig-card">'+
+        '<div class="ig-sub">— 請用瀏覽器開啟 —</div>'+
+        '<div class="ig-title">咚咔！太鼓挑戰</div>'+
+        '<p>目前在 App 內建瀏覽器中<br>音效與觸控可能異常</p>'+
+        '<p class="ig-step">'+(isIOS?'點右上角 <b>⋯</b> 或右下角 <b>⧉</b><br>選「<b>用 Safari 開啟</b>」':'點右上角 <b>⋮</b><br>選「<b>用瀏覽器開啟</b>」')+'</p>'+
+        (isIOS?'<a class="ig-btn" href="x-safari-'+cleanUrl+'">用 Safari 開啟</a>':'<a class="ig-btn" href="intent://'+location.host+location.pathname+'#Intent;scheme=https;package=com.android.chrome;end">用 Chrome 開啟</a>')+
+        '<button class="ig-copy" id="ig-copy">複製連結</button>'+
+      '</div>';
+    document.body.appendChild(box);
+    document.getElementById('ig-copy').addEventListener('click',function(){
+      var b=this;
+      function done(){ b.textContent='已複製，請貼到瀏覽器'; }
+      if(navigator.clipboard){ navigator.clipboard.writeText(cleanUrl).then(done,function(){ prompt('請複製連結',cleanUrl); }); }
+      else prompt('請複製連結',cleanUrl);
+    });
+  });
+})();
+</script>
+<style>
+#inapp-guard{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;
+  background:#121a30;touch-action:auto}
+#inapp-guard .ig-card{width:100%;max-width:330px;padding:26px 20px 20px;text-align:center;color:#1b1714;background:#f3e8d2;
+  border:3px solid #c8321f;outline:2px solid #c8321f;outline-offset:4px;border-radius:4px;font-family:'Noto Serif TC',serif}
+#inapp-guard .ig-sub{font-size:12px;letter-spacing:4px;color:#c8321f;font-weight:900}
+#inapp-guard .ig-title{font-size:28px;font-weight:900;margin:6px 0 12px}
+#inapp-guard p{font-size:14px;line-height:1.7;color:#4a3d33;font-weight:700;margin-bottom:10px}
+#inapp-guard .ig-step{background:rgba(200,50,31,.08);padding:10px;border-radius:4px;color:#1b1714}
+#inapp-guard .ig-btn{display:block;margin-top:6px;padding:12px 0;font-size:18px;font-weight:900;letter-spacing:3px;color:#fff;text-decoration:none;
+  background:#c8321f;border:2px solid #d8b25a;border-radius:4px;box-shadow:0 0 0 2px #1b1714}
+#inapp-guard .ig-copy{margin-top:12px;width:100%;padding:10px 0;font-family:inherit;font-size:14px;font-weight:700;color:#4a3d33;
+  background:none;border:1px dashed #4a3d33;border-radius:4px}
+</style>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700;900&display=swap" rel="stylesheet">
