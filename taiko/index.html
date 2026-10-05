@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>咚咔！太鼓挑戰</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --don:#e5412d; --don-hi:#ff8a72; --don-dark:#a3220f;
+  --ka:#3b8fc4;  --ka-hi:#8fd0f5;  --ka-dark:#1d5680;
+  --roll:#f5b921; --roll-hi:#ffd862; --roll-dark:#c98d07;
+  --gold:#d8b25a; --gold-hi:#f3d58a;
+  --ink:#1b1714;
+  --paper:#f3e8d2;
+  --shu:#c8321f;           /* 朱色 */
+  --night1:#121a30; --night2:#223058; --night3:#2e1f2c;
+  --wood:#5a2e1c; --wood-dark:#2b120a;
+  --judge-x:64px;
+  --drum:min(40vw,26vh,190px);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+html,body{height:100%;background:#0b0f1e;overflow:hidden;touch-action:none;
+  font-family:'Noto Serif TC','Hiragino Mincho ProN','PMingLiU',serif;color:var(--paper)}
+
+#game{position:relative;width:100%;max-width:480px;height:100%;margin:0 auto;overflow:hidden;
+  background:linear-gradient(180deg,var(--night1) 0%,var(--night2) 55%,var(--night3) 100%);
+  transition:background .6s}
+/* 七寶紋背景 */
+#game::before{content:'';position:absolute;inset:0;pointer-events:none;opacity:.9;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Cg fill='none' stroke='%23f3e8d2' stroke-opacity='.06' stroke-width='1'%3E%3Ccircle cx='0' cy='0' r='20'/%3E%3Ccircle cx='40' cy='0' r='20'/%3E%3Ccircle cx='0' cy='40' r='20'/%3E%3Ccircle cx='40' cy='40' r='20'/%3E%3Ccircle cx='20' cy='20' r='20'/%3E%3C/g%3E%3C/svg%3E");
+  background-size:40px 40px}
+#game.fever{background:linear-gradient(180deg,#2a0b10 0%,#5e1418 55%,#3a120e 100%)}
+
+/* ── HUD ── */
+#hud{position:absolute;top:0;left:0;right:0;height:58px;display:flex;align-items:center;justify-content:space-between;padding:8px 14px 0;z-index:20}
+.hud-box{min-width:92px}
+.hud-box.right{text-align:right}
+.lbl{font-size:11px;color:var(--gold);letter-spacing:2px}
+.val{font-size:24px;font-weight:900;line-height:1.1;font-variant-numeric:tabular-nums}
+.val.pop{animation:pop .18s ease-out}
+@keyframes pop{50%{transform:scale(1.15)}}
+.hud-time{width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(circle at 40% 35%,#7a432a,var(--wood));border:2px solid var(--gold);
+  box-shadow:0 0 0 2px var(--wood-dark);font-size:20px;font-weight:900;font-variant-numeric:tabular-nums}
+.hud-time.warn{color:#ffb4a6;animation:pop .5s infinite}
+
+#bars{position:absolute;top:62px;left:14px;right:14px;z-index:20}
+.bar{height:5px;border-radius:3px;background:rgba(243,232,210,.12);overflow:hidden}
+#timebar{height:100%;width:100%;background:linear-gradient(90deg,var(--gold),var(--gold-hi))}
+.fever-row{display:flex;align-items:center;gap:6px;margin-top:6px}
+.fever-tag{font-size:12px;font-weight:900;width:20px;height:20px;line-height:20px;text-align:center;border-radius:3px;
+  background:var(--shu);color:#fff}
+.fever-row .bar{flex:1;height:8px}
+#feverbar{height:100%;width:0%;background:linear-gradient(90deg,var(--shu),#ff7a3d,var(--gold-hi));transition:width .15s}
+#game.fever #feverbar{background:linear-gradient(90deg,var(--gold-hi),#fff3c4);transition:none}
+#game.fever .fever-tag{animation:pop .4s infinite}
+
+/* ── 燈籠 ── */
+#lanterns{position:absolute;top:98px;left:0;right:0;height:80px;pointer-events:none;z-index:2}
+#lanterns::before{content:'';position:absolute;left:-10px;right:-10px;top:0;height:22px;
+  border-top:2px solid rgba(243,232,210,.35);border-radius:50%/0 0 100% 100%}
+.lantern{position:absolute;top:0;transform-origin:top center;animation:swing 3.2s ease-in-out infinite}
+.lantern .str{width:1px;margin:0 auto;background:rgba(243,232,210,.4)}
+.lantern .body{position:relative;width:30px;height:38px;border-radius:45%;
+  background:radial-gradient(circle at 50% 45%,#ff9a6a,#d63a24 55%,#8a1410);
+  box-shadow:0 0 18px rgba(255,110,60,.45);display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:900;color:var(--ink);transition:box-shadow .5s}
+.lantern .body::before,.lantern .body::after{content:'';position:absolute;left:7px;right:7px;height:4px;background:var(--ink);border-radius:2px}
+.lantern .body::before{top:-2px}.lantern .body::after{bottom:-2px}
+.lantern .body i{position:absolute;inset:0;border-radius:45%;
+  background:repeating-linear-gradient(180deg,transparent 0 6px,rgba(0,0,0,.12) 6px 7px)}
+#game.fever .lantern .body{box-shadow:0 0 30px rgba(255,190,90,.9)}
+@keyframes swing{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(3deg)}}
+
+/* ── 軌道 ── */
+#track{position:absolute;left:0;right:0;top:30%;height:116px;z-index:5;
+  background:linear-gradient(180deg,#24170f 0%,#3a2619 50%,#24170f 100%);
+  border-top:5px solid var(--shu);border-bottom:5px solid var(--shu);
+  box-shadow:inset 0 2px 0 var(--gold),inset 0 -2px 0 var(--gold),0 6px 18px rgba(0,0,0,.5)}
+#game.fever #track{border-color:var(--gold);box-shadow:inset 0 2px 0 #fff3c4,inset 0 -2px 0 #fff3c4,0 0 26px rgba(255,190,90,.5)}
+#lane{position:absolute;inset:0;overflow:hidden}
+#judge{position:absolute;left:calc(var(--judge-x) - 36px);top:50%;width:72px;height:72px;margin-top:-36px;border-radius:50%;
+  border:3px solid rgba(243,232,210,.75);background:rgba(0,0,0,.28);transition:background .08s,box-shadow .08s;z-index:1}
+#judge::after{content:'';position:absolute;inset:9px;border-radius:50%;border:2px dashed rgba(243,232,210,.35)}
+#judge.f-don{background:rgba(229,65,45,.45);box-shadow:0 0 22px var(--don)}
+#judge.f-ka{background:rgba(59,143,196,.45);box-shadow:0 0 22px var(--ka)}
+#judge.f-roll{background:rgba(245,185,33,.4);box-shadow:0 0 22px var(--roll)}
+
+/* ── 音符 ── */
+.note{position:absolute;left:0;top:50%;will-change:transform;display:flex;align-items:center;justify-content:center;
+  font-weight:900;color:#fff;text-shadow:0 1px 0 rgba(0,0,0,.45)}
+.note.don,.note.ka{width:52px;height:52px;border-radius:50%;border:3px solid #fff8ea;
+  box-shadow:0 0 0 3px var(--ink),0 3px 6px rgba(0,0,0,.5);font-size:19px}
+.note.don{background:radial-gradient(circle at 35% 30%,var(--don-hi),var(--don) 55%,var(--don-dark))}
+.note.ka{background:radial-gradient(circle at 35% 30%,var(--ka-hi),var(--ka) 55%,var(--ka-dark))}
+.note.big{width:76px;height:76px;border-radius:50%;border:4px solid #fff8ea;font-size:30px;
+  box-shadow:0 0 0 3px var(--ink),0 0 16px rgba(255,215,120,.65);
+  background:radial-gradient(circle at 35% 28%,rgba(255,255,255,.4),transparent 45%),
+             linear-gradient(90deg,var(--don) 0 50%,var(--ka) 50% 100%)}
+.note.roll{height:46px;border-radius:23px;border:3px solid #fff8ea;justify-content:flex-start;
+  box-shadow:0 0 0 3px var(--ink),0 3px 6px rgba(0,0,0,.5);
+  background:linear-gradient(180deg,var(--roll-hi),var(--roll) 55%,var(--roll-dark))}
+.note.roll .rh{width:40px;flex:none;text-align:center;font-size:12px;line-height:1.05;color:var(--wood-dark);text-shadow:none}
+.note.missed{opacity:.3;filter:grayscale(.9)}
+.note.fade{transition:opacity .25s;opacity:0}
+
+/* 特效 */
+.fly{position:absolute;top:50%;pointer-events:none;z-index:30;animation:fly .45s ease-out forwards}
+@keyframes fly{0%{transform:translate(0,-50%) scale(1);opacity:1}
+  100%{transform:translate(130px,-210px) scale(.45);opacity:0}}
+.ring{position:absolute;left:calc(var(--judge-x) - 36px);top:50%;width:72px;height:72px;margin-top:-36px;border-radius:50%;
+  border:4px solid var(--gold-hi);pointer-events:none;z-index:29;animation:ring .38s ease-out forwards}
+.ring.ok{border-color:#fff8ea}
+@keyframes ring{to{transform:scale(1.8);opacity:0}}
+.petal{position:absolute;width:10px;height:10px;border-radius:0 100% 0 100%;pointer-events:none;z-index:29;
+  animation:petal .6s ease-out forwards}
+@keyframes petal{to{transform:translate(var(--dx),var(--dy)) rotate(var(--r));opacity:0}}
+
+#jtext{position:absolute;left:calc(var(--judge-x) - 40px);width:80px;text-align:center;top:-44px;font-size:26px;font-weight:900;
+  opacity:0;pointer-events:none;z-index:31;text-shadow:0 2px 0 var(--ink),0 0 10px rgba(0,0,0,.6)}
+#jtext.show{animation:jt .5s ease-out forwards}
+#jtext.great{color:var(--gold-hi)} #jtext.ok{color:#fff8ea} #jtext.bad{color:#9fb3c8;font-size:22px}
+#jtext.dai{color:#ffcf6b;font-size:24px;width:120px;left:calc(var(--judge-x) - 60px)}
+@keyframes jt{0%{opacity:0;transform:translateY(8px) scale(.7)}25%{opacity:1;transform:translateY(0) scale(1.15)}
+  75%{opacity:1;transform:translateY(-4px) scale(1)}100%{opacity:0;transform:translateY(-10px)}}
+
+#rollcnt{position:absolute;left:calc(var(--judge-x) + 44px);top:-40px;padding:2px 10px;border-radius:4px;
+  background:var(--roll);color:var(--wood-dark);font-weight:900;font-size:18px;opacity:0;pointer-events:none;z-index:31;
+  box-shadow:0 0 0 2px var(--ink)}
+#rollcnt.on{opacity:1}
+#rollcnt.bump{animation:pop .12s}
+
+/* ── 連擊 ── */
+#combo{position:absolute;left:0;right:0;top:calc(30% + 126px);text-align:center;z-index:6;pointer-events:none;opacity:0;transition:opacity .2s}
+#combo.on{opacity:1}
+#combo .num{font-size:40px;font-weight:900;line-height:1;color:#fff8ea;text-shadow:0 3px 0 var(--shu),0 0 14px rgba(0,0,0,.5);font-variant-numeric:tabular-nums}
+#combo .num.pop{animation:pop .15s}
+#combo .cl{font-size:12px;letter-spacing:6px;color:var(--gold)}
+#game.fever #combo .num{color:var(--gold-hi)}
+#milestone{position:absolute;left:50%;top:calc(30% - 4px);z-index:32;pointer-events:none;opacity:0;
+  transform:translate(-50%,-100%);font-size:22px;font-weight:900;color:#fff;padding:4px 16px;
+  background:var(--shu);border:2px solid var(--gold-hi);white-space:nowrap}
+#milestone.show{animation:ms .9s ease-out forwards}
+@keyframes ms{0%{opacity:0;transform:translate(-50%,-80%) scale(.6)}20%{opacity:1;transform:translate(-50%,-100%) scale(1.1)}
+  80%{opacity:1;transform:translate(-50%,-100%) scale(1)}100%{opacity:0;transform:translate(-50%,-120%)}}
+
+/* ── 祭 FEVER ── */
+#stamp{position:absolute;left:50%;top:44%;z-index:40;pointer-events:none;display:none;text-align:center;transform:translate(-50%,-50%)}
+#stamp .seal{width:110px;height:110px;margin:0 auto;border-radius:10px;background:var(--shu);border:4px solid #fff3c4;
+  display:flex;align-items:center;justify-content:center;font-size:72px;font-weight:900;color:#fff;
+  box-shadow:0 0 40px rgba(255,120,60,.8)}
+#stamp .sub{margin-top:8px;font-size:22px;font-weight:900;color:var(--gold-hi);letter-spacing:3px;text-shadow:0 2px 0 var(--ink)}
+#stamp.show{display:block;animation:stamp 1.3s ease-out forwards}
+@keyframes stamp{0%{opacity:0;transform:translate(-50%,-50%) scale(2.2) rotate(-12deg)}
+  18%{opacity:1;transform:translate(-50%,-50%) scale(.95) rotate(-4deg)}
+  26%{transform:translate(-50%,-50%) scale(1) rotate(-4deg)}
+  85%{opacity:1}100%{opacity:0;transform:translate(-50%,-50%) scale(1) rotate(-4deg)}}
+
+/* ── 太鼓按鈕 ── */
+#drums{position:absolute;left:0;right:0;top:58%;bottom:0;display:flex;z-index:10;
+  padding-bottom:env(safe-area-inset-bottom);
+  background:linear-gradient(180deg,transparent,rgba(0,0,0,.35) 30%,rgba(0,0,0,.5))}
+.zone{flex:1;display:flex;align-items:center;justify-content:center;position:relative}
+.zone+.zone::before{content:'';position:absolute;left:0;top:14%;bottom:14%;width:1px;background:rgba(243,232,210,.15)}
+.drum{position:relative;width:var(--drum);height:var(--drum);transition:transform .06s}
+.rim{position:absolute;inset:0;border-radius:50%;padding:12px;
+  box-shadow:0 0 0 6px var(--wood),0 0 0 8px var(--wood-dark),0 9px 0 8px #170904,0 14px 22px 8px rgba(0,0,0,.5);
+  transition:box-shadow .06s}
+.rim::before{content:'';position:absolute;inset:4px;border-radius:50%;border:3px dotted var(--gold-hi);opacity:.85}
+.zone.don .rim{background:radial-gradient(circle,var(--don) 60%,var(--don-dark))}
+.zone.ka .rim{background:radial-gradient(circle,var(--ka) 60%,var(--ka-dark))}
+.skin{position:relative;width:100%;height:100%;border-radius:50%;overflow:hidden;
+  background:radial-gradient(circle at 40% 35%,#fffaf0,#efe0bf 65%,#d4bd90);
+  box-shadow:inset 0 0 0 2px rgba(0,0,0,.25),inset 0 -6px 14px rgba(0,0,0,.15);
+  display:flex;align-items:center;justify-content:center}
+.logo-slot{width:62%;height:62%;display:flex;align-items:center;justify-content:center;
+  border:2px dashed rgba(27,23,20,.3);border-radius:12px;color:rgba(27,23,20,.4);font-size:13px;font-weight:700;letter-spacing:2px}
+.logo-slot.has-img{border:none}
+.logo-slot img{max-width:100%;max-height:100%;object-fit:contain;pointer-events:none}
+.badge{position:absolute;left:50%;top:-20px;transform:translateX(-50%);z-index:3;
+  padding:2px 12px;font-size:17px;font-weight:900;color:#fff;border:2px solid var(--gold-hi);border-radius:4px;box-shadow:0 0 0 2px var(--ink)}
+.zone.don .badge{background:var(--don)} .zone.ka .badge{background:var(--ka)}
+.zone.pressed .drum{transform:translateY(5px) scale(.97)}
+.zone.pressed .rim{box-shadow:0 0 0 6px var(--wood),0 0 0 8px var(--wood-dark),0 4px 0 8px #170904,0 8px 14px 8px rgba(0,0,0,.5)}
+.ripple{position:absolute;left:50%;top:50%;width:30%;height:30%;margin:-15% 0 0 -15%;border-radius:50%;pointer-events:none;
+  animation:ripple .35s ease-out forwards}
+.zone.don .ripple{border:4px solid rgba(229,65,45,.7)}
+.zone.ka .ripple{border:4px solid rgba(59,143,196,.75)}
+@keyframes ripple{to{transform:scale(3.2);opacity:0}}
+
+/* ── 覆蓋畫面 ── */
+#overlay{position:absolute;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:18px;
+  background:rgba(8,10,20,.72)}
+.card{position:relative;width:100%;max-width:340px;padding:26px 20px 20px;text-align:center;color:var(--ink);
+  background:
+    radial-gradient(circle at 20% 15%,rgba(255,255,255,.5),transparent 40%),
+    repeating-linear-gradient(90deg,rgba(120,90,50,.035) 0 2px,transparent 2px 5px),
+    var(--paper);
+  border:3px solid var(--shu);outline:2px solid var(--shu);outline-offset:4px;border-radius:4px;
+  box-shadow:0 18px 40px rgba(0,0,0,.6)}
+.card .sub{font-size:12px;letter-spacing:8px;color:var(--shu);font-weight:900}
+.card h1{font-size:34px;font-weight:900;line-height:1.2;margin:6px 0 14px;letter-spacing:2px}
+.legend{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-bottom:14px}
+.leg p{font-size:11px;line-height:1.35;margin-top:6px;color:#4a3d33;font-weight:700}
+.mini{margin:0 auto;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;
+  border:2px solid #fff8ea;box-shadow:0 0 0 2px var(--ink);text-shadow:0 1px 0 rgba(0,0,0,.4)}
+.mini.don,.mini.ka{width:36px;height:36px;border-radius:50%;font-size:14px}
+.mini.don{background:var(--don)} .mini.ka{background:var(--ka)}
+.mini.big{width:40px;height:40px;border-radius:50%;font-size:18px;margin-top:-2px;
+  background:linear-gradient(90deg,var(--don) 0 50%,var(--ka) 50% 100%)}
+.mini.roll{width:58px;height:32px;border-radius:16px;font-size:11px;margin-top:2px;color:var(--wood-dark);text-shadow:none;background:var(--roll)}
+.rule{font-size:13px;line-height:1.7;color:#4a3d33;margin-bottom:16px;font-weight:700}
+.btn{display:block;width:100%;padding:13px 0;font-family:inherit;font-size:22px;font-weight:900;letter-spacing:10px;color:#fff;
+  background:linear-gradient(180deg,#e04a33,var(--shu));border:2px solid var(--gold);border-radius:4px;
+  box-shadow:0 0 0 2px var(--ink),0 5px 0 2px #6b1408;cursor:pointer}
+.btn:active{transform:translateY(3px);box-shadow:0 0 0 2px var(--ink),0 2px 0 2px #6b1408}
+.sound{margin-top:12px;background:none;border:none;font-family:inherit;font-size:13px;color:#6b5a4c;font-weight:700;cursor:pointer;padding:4px 10px}
+.final{font-size:54px;font-weight:900;line-height:1;color:var(--shu);margin:4px 0 2px;font-variant-numeric:tabular-nums}
+.final-lbl{font-size:11px;letter-spacing:6px;color:#6b5a4c;margin-bottom:14px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;margin-bottom:18px;text-align:left;font-size:14px;font-weight:700}
+.stats div{display:flex;justify-content:space-between;border-bottom:1px dashed rgba(27,23,20,.25);padding-bottom:3px}
+.stats b{font-variant-numeric:tabular-nums}
+
+#countdown{position:absolute;left:0;right:0;top:40%;transform:translateY(-50%);text-align:center;z-index:90;pointer-events:none;
+  font-size:96px;font-weight:900;color:#fff8ea;text-shadow:0 5px 0 var(--shu),0 0 30px rgba(0,0,0,.6);display:none}
+#countdown.go{font-size:64px}
+#countdown.tick{display:block;animation:cd .6s ease-out}
+@keyframes cd{0%{opacity:0;transform:translateY(-50%) scale(1.8)}30%{opacity:1;transform:translateY(-50%) scale(1)}100%{opacity:.9}}
+</style>
+</head>
+<body>
+<div id="game">
+  <div id="hud">
+    <div class="hud-box"><div class="lbl">得分</div><div id="score" class="val">0</div></div>
+    <div class="hud-time" id="time">40</div>
+    <div class="hud-box right"><div class="lbl">最高連擊</div><div id="maxc" class="val">0</div></div>
+  </div>
+  <div id="bars">
+    <div class="bar"><div id="timebar"></div></div>
+    <div class="fever-row"><span class="fever-tag">祭</span><div class="bar"><div id="feverbar"></div></div></div>
+  </div>
+
+  <div id="lanterns"></div>
+
+  <div id="track">
+    <div id="lane"><div id="judge"></div></div>
+    <div id="jtext"></div>
+    <div id="rollcnt"></div>
+  </div>
+
+  <div id="combo"><div class="num" id="combo-num">0</div><div class="cl">連擊</div></div>
+  <div id="milestone"></div>
+  <div id="stamp"><div class="seal">祭</div><div class="sub">FEVER ×2</div></div>
+  <div id="countdown"></div>
+
+  <div id="drums">
+    <div class="zone don" id="zone-don">
+      <div class="drum">
+        <div class="badge">咚</div>
+        <div class="rim"><div class="skin"><div class="logo-slot" id="logo-don">LOGO</div></div></div>
+      </div>
+    </div>
+    <div class="zone ka" id="zone-ka">
+      <div class="drum">
+        <div class="badge">咔</div>
+        <div class="rim"><div class="skin"><div class="logo-slot" id="logo-ka">LOGO</div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="overlay"></div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+/* ════════════ 可調整設定 ════════════ */
+const CFG = {
+  TITLE:      '咚咔！<br>太鼓挑戰',
+  SUBTITLE:   '— 祭 —',
+  LOGO_DON:   '',          // 左鼓 LOGO 圖片路徑，例如 'logo.png'；留空顯示預設框
+  LOGO_KA:    '',          // 右鼓 LOGO 圖片路徑
+  LANTERN_TEXT: ['','','祭','',''],
+
+  TOTAL_TIME: 40,          // 秒
+  FIRST_NOTE: 2200,        // 第一顆音符到判定圈的時間（毫秒）
+  TRAVEL_START: 2000,      // 開場：音符從右到判定圈要幾毫秒（越大越慢）
+  TRAVEL_END:   1250,      // 結尾
+  GAP_START: 650,          // 開場音符間隔（毫秒）
+  GAP_END:   330,          // 結尾音符間隔
+  P_BIG:   0.10,           // 大音符機率
+  P_ROLL:  0.07,           // 連打機率
+  P_BURST: 0.18,           // 快速連續（2~3 顆）機率
+  ROLL_MIN: 1100, ROLL_MAX: 1900, // 連打長度（毫秒）
+
+  WIN_GREAT: 55,           // 「良」判定範圍 ±毫秒
+  WIN_OK:    120,          // 「可」判定範圍 ±毫秒
+  DOUBLE_WIN: 140,         // 大音符兩鼓「同時」的容許差（毫秒）
+
+  SCORE_GREAT: 300, SCORE_OK: 150, SCORE_ROLL: 100,
+  FEVER_GREAT: 5, FEVER_OK: 3, FEVER_DOUBLE: 3, FEVER_ROLL: 0.8,
+  FEVER_DURATION: 8000,    // 祭典 FEVER 持續（毫秒），分數 ×2
+};
+/* ═══════════════════════════════════ */
+
+const $ = id => document.getElementById(id);
+const game=$('game'), lane=$('lane'), track=$('track'), judge=$('judge');
+const scoreEl=$('score'), maxcEl=$('maxc'), timeEl=$('time'), timebar=$('timebar'), feverbar=$('feverbar');
+const comboBox=$('combo'), comboNum=$('combo-num'), milestone=$('milestone'), stamp=$('stamp');
+const jtext=$('jtext'), rollcnt=$('rollcnt'), overlay=$('overlay'), countdown=$('countdown');
+const zones={don:$('zone-don'), ka:$('zone-ka')};
+const TOTAL=CFG.TOTAL_TIME*1000;
+const JX=64;
+const SIZE={don:52,ka:52,big:76,roll:46};
+
+// LOGO
+function applyLogo(slot,src){
+  if(!src) return;
+  slot.textContent=''; slot.classList.add('has-img');
+  const img=new Image(); img.src=src; img.alt=''; img.draggable=false; slot.appendChild(img);
+}
+applyLogo($('logo-don'),CFG.LOGO_DON);
+applyLogo($('logo-ka'),CFG.LOGO_KA);
+
+// 燈籠
+(function(){
+  const box=$('lanterns'), n=CFG.LANTERN_TEXT.length;
+  CFG.LANTERN_TEXT.forEach((txt,i)=>{
+    const l=document.createElement('div'); l.className='lantern';
+    const pct=(i+0.5)/n*100, mid=Math.abs(pct-50)/50;
+    const strLen=Math.round(22-mid*12);
+    l.style.left=`calc(${pct}% - 15px)`;
+    l.style.animationDelay=(-Math.random()*3)+'s';
+    l.innerHTML=`<div class="str" style="height:${strLen}px"></div><div class="body"><i></i>${txt}</div>`;
+    box.appendChild(l);
+  });
+})();
+
+/* ── 狀態 ── */
+let state='idle';               // idle | countdown | playing | ended
+let startTs=0, rafId=0, trackW=0;
+let notes=[], pending=null, gen=null;
+let score=0, combo=0, maxCombo=0, stats=null;
+let fever=0, inFever=false, feverEnd=0;
+let pendingBig=null, activeRoll=null, lastSec=-1;
+
+const lerp=(a,b,p)=>a+(b-a)*p;
+const prog=ms=>Math.min(1,Math.max(0,ms/TOTAL));
+const nowT=()=>performance.now()-startTs;
+
+/* ── 譜面產生 ── */
+function genNote(){
+  const g=gen, hit=g.nextHit;
+  if(hit>TOTAL-500) return null;
+  const p=prog(hit);
+  const gap=lerp(CFG.GAP_START,CFG.GAP_END,p);
+  const travel=lerp(CFG.TRAVEL_START,CFG.TRAVEL_END,p);
+  const r=Math.random();
+  const canRoll = hit>5000 && hit<TOTAL-4500 && g.burst===0 && g.sinceRoll>=6;
+  const canBig  = g.burst===0 && g.lastType!=='big';
+  let type;
+  if(canRoll && r<CFG.P_ROLL) type='roll';
+  else if(canBig && r<CFG.P_ROLL+CFG.P_BIG) type='big';
+  else type=Math.random()<.5?'don':'ka';
+
+  const n={type,hit,travel,done:false,el:null,v:0};
+  if(type==='roll'){
+    n.end=hit+lerp(CFG.ROLL_MIN,CFG.ROLL_MAX,Math.random()); n.count=0;
+    g.nextHit=n.end+gap*1.4; g.sinceRoll=0;
+  }else if(type==='big'){
+    g.nextHit=hit+gap*1.5; g.sinceRoll++;
+  }else{
+    g.sinceRoll++;
+    if(g.burst>0){ g.burst--; g.nextHit=hit+(g.burst>0?gap*.5:gap*1.2); }
+    else if(p>.15 && Math.random()<CFG.P_BURST){ g.burst=Math.random()<.5?1:2; g.nextHit=hit+gap*.5; }
+    else g.nextHit=hit+gap;
+  }
+  g.lastType=type;
+  return n;
+}
+
+function spawn(n){
+  n.v=(trackW+70-JX)/n.travel;                 // px / ms
+  const el=document.createElement('div');
+  if(n.type==='roll'){
+    el.className='note roll';
+    el.style.width=((n.end-n.hit)*n.v+SIZE.roll)+'px';
+    el.style.zIndex='2';
+    el.innerHTML='<span class="rh">連<br>打</span>';
+  }else{
+    el.className='note '+n.type;
+    el.style.zIndex=String(100000-Math.round(n.hit/10));
+    el.innerHTML='<span>'+({don:'咚',ka:'咔',big:'大'})[n.type]+'</span>';
+  }
+  n.half=SIZE[n.type]/2;
+  n.el=el; lane.appendChild(el); notes.push(n);
+}
+
+/* ── 主迴圈 ── */
+function loop(ts){
+  if(state!=='playing') return;
+  const t=ts-startTs;
+  if(t>=TOTAL){ endGame(); return; }
+
+  while(pending && t>=pending.hit-pending.travel){ spawn(pending); pending=genNote(); }
+
+  for(const n of notes){
+    if(n.gone) continue;
+    const x=JX+(n.hit-t)*n.v;
+    n.el.style.transform=`translate3d(${(x-n.half).toFixed(1)}px,-50%,0)`;
+    if(!n.done){
+      if(n.type==='roll'){ if(t>n.end+80) finishRoll(n); }
+      else if(t>n.hit+CFG.WIN_OK) doMiss(n);
+    }else if(n.missed){
+      if(x<-n.half-10) removeNote(n);
+    }
+  }
+  if(notes.length>40) notes=notes.filter(n=>!n.gone);
+
+  if(pendingBig && t>pendingBig.until) pendingBig=null;
+
+  // 計時
+  const sec=Math.ceil((TOTAL-t)/1000);
+  if(sec!==lastSec){ lastSec=sec; timeEl.textContent=sec; timeEl.classList.toggle('warn',sec<=5); }
+  timebar.style.width=((1-t/TOTAL)*100)+'%';
+
+  // 祭典
+  if(inFever){
+    feverbar.style.width=Math.max(0,(feverEnd-t)/CFG.FEVER_DURATION*100)+'%';
+    if(t>=feverEnd) endFever();
+  }
+  rafId=requestAnimationFrame(loop);
+}
+
+function removeNote(n){ n.gone=true; if(n.el&&n.el.parentNode) n.el.remove(); }
+
+/* ── 敲擊判定 ── */
+function press(side){
+  drumFx(side); sfx(side);
+  if(state!=='playing') return;
+  const t=nowT();
+
+  // 1. 大音符：另一鼓補打
+  if(pendingBig && t<=pendingBig.until && side!==pendingBig.side){
+    addScore(pendingBig.base); addFever(CFG.FEVER_DOUBLE);
+    showJudge('大成功！','dai'); ringFx('great'); petals('#f3d58a',10);
+    pendingBig=null; return;
+  }
+  // 2. 連打（不分左右）
+  const roll=notes.find(n=>n.type==='roll'&&!n.done&&t>=n.hit-60&&t<=n.end+60);
+  if(roll){
+    roll.count++; stats.roll++;
+    addScore(CFG.SCORE_ROLL); addFever(CFG.FEVER_ROLL);
+    flashJudge('f-roll'); petals('#f5b921',3);
+    rollcnt.textContent='連打 '+roll.count; rollcnt.classList.add('on');
+    rollcnt.classList.remove('bump'); void rollcnt.offsetWidth; rollcnt.classList.add('bump');
+    return;
+  }
+  // 3. 一般音符
+  let best=null;
+  for(const n of notes){
+    if(n.done||n.type==='roll') continue;
+    if(Math.abs(t-n.hit)<=CFG.WIN_OK && (!best||n.hit<best.hit)) best=n;
+  }
+  if(!best) return;                        // 空打不扣分
+
+  if(best.type!=='big' && best.type!==side){ doMiss(best); return; }   // 打錯鼓
+
+  const d=Math.abs(t-best.hit);
+  const grade=d<=CFG.WIN_GREAT?'great':'ok';
+  const base=grade==='great'?CFG.SCORE_GREAT:CFG.SCORE_OK;
+  best.done=true;
+  stats[grade]++;
+  addCombo();
+  addScore(base);
+  addFever(grade==='great'?CFG.FEVER_GREAT:CFG.FEVER_OK);
+  showJudge(grade==='great'?'良':'可',grade);
+  flyFx(best); ringFx(grade);
+  const color=best.type==='ka'?'#8fd0f5':best.type==='don'?'#ff8a72':'#f3d58a';
+  petals(color,grade==='great'?8:5);
+  flashJudge(best.type==='ka'?'f-ka':'f-don');
+  removeNote(best);
+  if(best.type==='big') pendingBig={side,until:t+CFG.DOUBLE_WIN,base};
+}
+
+function doMiss(n){
+  n.done=true; n.missed=true; n.el.classList.add('missed');
+  stats.miss++; breakCombo(); showJudge('不可','bad');
+}
+
+function finishRoll(n){
+  n.done=true;
+  n.el.classList.add('fade'); setTimeout(()=>removeNote(n),260);
+  if(n.count>0){ rollcnt.textContent='連打 '+n.count+'！'; setTimeout(()=>rollcnt.classList.remove('on'),600); }
+  else rollcnt.classList.remove('on');
+}
+
+/* ── 分數 / 連擊 / 祭典 ── */
+function addScore(pts){
+  score+=pts*(inFever?2:1);
+  scoreEl.textContent=score;
+  scoreEl.classList.remove('pop'); void scoreEl.offsetWidth; scoreEl.classList.add('pop');
+}
+function addCombo(){
+  combo++;
+  if(combo>maxCombo){ maxCombo=combo; maxcEl.textContent=maxCombo; }
+  comboNum.textContent=combo;
+  comboBox.classList.toggle('on',combo>=3);
+  comboNum.classList.remove('pop'); void comboNum.offsetWidth; comboNum.classList.add('pop');
+  if(combo%10===0){
+    milestone.textContent=combo+' 連擊！';
+    milestone.classList.remove('show'); void milestone.offsetWidth; milestone.classList.add('show');
+  }
+}
+function breakCombo(){ combo=0; comboNum.textContent='0'; comboBox.classList.remove('on'); }
+function addFever(a){
+  if(inFever) return;
+  fever=Math.min(100,fever+a);
+  feverbar.style.width=fever+'%';
+  if(fever>=100) startFever();
+}
+function startFever(){
+  inFever=true; fever=0; feverEnd=nowT()+CFG.FEVER_DURATION;
+  game.classList.add('fever');
+  stamp.classList.remove('show'); void stamp.offsetWidth; stamp.classList.add('show');
+}
+function endFever(){
+  inFever=false; game.classList.remove('fever'); feverbar.style.width='0%';
+}
+
+/* ── 特效 ── */
+function showJudge(txt,cls){
+  jtext.textContent=txt; jtext.className=cls; void jtext.offsetWidth; jtext.classList.add('show');
+}
+let jfTO=null;
+function flashJudge(cls){
+  judge.className=cls; clearTimeout(jfTO); jfTO=setTimeout(()=>judge.className='',90);
+}
+function flyFx(n){
+  const f=document.createElement('div');
+  f.className='note fly '+n.type;
+  f.style.left=(JX-n.half)+'px';
+  f.innerHTML=n.el.innerHTML;
+  track.appendChild(f); setTimeout(()=>f.remove(),480);
+}
+function ringFx(grade){
+  const r=document.createElement('div'); r.className='ring'+(grade==='great'?'':' ok');
+  track.appendChild(r); setTimeout(()=>r.remove(),400);
+}
+function petals(color,count){
+  const cy=track.offsetHeight/2;
+  for(let i=0;i<count;i++){
+    const p=document.createElement('div'); p.className='petal';
+    const a=Math.random()*Math.PI*2, dist=40+Math.random()*50;
+    p.style.left=(JX-5)+'px'; p.style.top=(cy-5)+'px'; p.style.background=color;
+    p.style.setProperty('--dx',(Math.cos(a)*dist).toFixed(0)+'px');
+    p.style.setProperty('--dy',(Math.sin(a)*dist).toFixed(0)+'px');
+    p.style.setProperty('--r',(Math.random()*360|0)+'deg');
+    track.appendChild(p); setTimeout(()=>p.remove(),620);
+  }
+}
+const pressTO={};
+function drumFx(side){
+  const z=zones[side];
+  z.classList.add('pressed'); clearTimeout(pressTO[side]);
+  pressTO[side]=setTimeout(()=>z.classList.remove('pressed'),80);
+  const skin=z.querySelector('.skin');
+  const r=document.createElement('div'); r.className='ripple'; skin.appendChild(r);
+  setTimeout(()=>r.remove(),360);
+}
+
+/* ── 音效（合成，不需音檔） ── */
+let actx=null, soundOn=true, noiseBuf=null;
+function initAudio(){
+  if(actx) { if(actx.state==='suspended') actx.resume(); return; }
+  try{
+    actx=new (window.AudioContext||window.webkitAudioContext)();
+    noiseBuf=actx.createBuffer(1,actx.sampleRate*0.08,actx.sampleRate);
+    const d=noiseBuf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1;
+  }catch(e){ actx=null; }
+}
+function sfx(side){
+  if(!soundOn||!actx) return;
+  const t0=actx.currentTime;
+  if(side==='don'){
+    const o=actx.createOscillator(), g=actx.createGain();
+    o.type='sine'; o.frequency.setValueAtTime(190,t0); o.frequency.exponentialRampToValueAtTime(55,t0+.18);
+    g.gain.setValueAtTime(.9,t0); g.gain.exponentialRampToValueAtTime(.001,t0+.22);
+    o.connect(g); g.connect(actx.destination); o.start(t0); o.stop(t0+.24);
+  }else{
+    const s=actx.createBufferSource(), f=actx.createBiquadFilter(), g=actx.createGain();
+    s.buffer=noiseBuf; f.type='bandpass'; f.frequency.value=2600; f.Q.value=1.2;
+    g.gain.setValueAtTime(.7,t0); g.gain.exponentialRampToValueAtTime(.001,t0+.06);
+    s.connect(f); f.connect(g); g.connect(actx.destination); s.start(t0); s.stop(t0+.08);
+    const o=actx.createOscillator(), g2=actx.createGain();
+    o.type='triangle'; o.frequency.setValueAtTime(1200,t0); o.frequency.exponentialRampToValueAtTime(700,t0+.05);
+    g2.gain.setValueAtTime(.35,t0); g2.gain.exponentialRampToValueAtTime(.001,t0+.06);
+    o.connect(g2); g2.connect(actx.destination); o.start(t0); o.stop(t0+.07);
+  }
+}
+
+/* ── 輸入 ── */
+function bindZone(side){
+  const z=zones[side];
+  z.addEventListener('touchstart',e=>{
+    e.preventDefault();
+    for(let i=0;i<e.changedTouches.length;i++) press(side);
+  },{passive:false});
+  z.addEventListener('mousedown',e=>{ e.preventDefault(); press(side); });
+}
+bindZone('don'); bindZone('ka');
+document.addEventListener('keydown',e=>{
+  if(e.repeat) return;
+  const k=e.key.toLowerCase();
+  if(k==='d'||k==='f') press('don');
+  else if(k==='j'||k==='k') press('ka');
+});
+document.addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
+window.addEventListener('resize',()=>{ trackW=track.clientWidth; });
+
+function onTap(el,fn){
+  el.addEventListener('click',fn);
+  el.addEventListener('touchend',e=>{ e.preventDefault(); fn(); },{passive:false});
+}
+
+/* ── 流程 ── */
+function showStart(){
+  overlay.innerHTML=`
+    <div class="card">
+      <div class="sub">${CFG.SUBTITLE}</div>
+      <h1>${CFG.TITLE}</h1>
+      <div class="legend">
+        <div class="leg"><div class="mini don">咚</div><p>敲左鼓</p></div>
+        <div class="leg"><div class="mini ka">咔</div><p>敲右鼓</p></div>
+        <div class="leg"><div class="mini big">大</div><p>兩鼓齊敲<br>分數×2</p></div>
+        <div class="leg"><div class="mini roll">連打</div><p>任一鼓<br>狂敲</p></div>
+      </div>
+      <p class="rule">音符移動到左邊圓圈時敲下<br>連續命中集滿「祭」→ 分數 ×2</p>
+      <button class="btn" id="start-btn">開始</button>
+      <button class="sound" id="sound-btn">音效：${soundOn?'開':'關'}</button>
+    </div>`;
+  overlay.style.display='flex';
+  onTap($('start-btn'),beginCountdown);
+  onTap($('sound-btn'),()=>{ soundOn=!soundOn; $('sound-btn').textContent='音效：'+(soundOn?'開':'關'); });
+}
+
+function resetGame(){
+  notes.forEach(removeNote); notes=[];
+  lane.querySelectorAll('.note').forEach(e=>e.remove());
+  score=0; combo=0; maxCombo=0; fever=0; inFever=false; pendingBig=null; lastSec=-1;
+  stats={great:0,ok:0,miss:0,roll:0};
+  gen={nextHit:CFG.FIRST_NOTE,lastType:null,burst:0,sinceRoll:0};
+  pending=genNote();
+  scoreEl.textContent='0'; maxcEl.textContent='0'; comboNum.textContent='0'; comboBox.classList.remove('on');
+  timeEl.textContent=CFG.TOTAL_TIME; timeEl.classList.remove('warn');
+  timebar.style.width='100%'; feverbar.style.width='0%';
+  game.classList.remove('fever'); rollcnt.classList.remove('on');
+  trackW=track.clientWidth;
+}
+
+function beginCountdown(){
+  if(state==='countdown'||state==='playing') return;
+  initAudio();
+  resetGame();
+  overlay.style.display='none';
+  state='countdown';
+  const seq=['3','2','1','開始！'];
+  let i=0;
+  const tick=()=>{
+    if(i>=seq.length){ countdown.style.display='none'; countdown.className=''; startPlay(); return; }
+    countdown.textContent=seq[i];
+    countdown.className=(i===3?'go ':'')+'tick'; countdown.style.display='';
+    void countdown.offsetWidth;
+    i++; setTimeout(tick,i===4?500:650);
+  };
+  tick();
+}
+
+function startPlay(){
+  state='playing';
+  startTs=performance.now();
+  rafId=requestAnimationFrame(loop);
+}
+
+function endGame(){
+  state='ended';
+  cancelAnimationFrame(rafId);
+  notes.forEach(removeNote); notes=[];
+  endFever(); rollcnt.classList.remove('on');
+  timeEl.textContent='0'; timebar.style.width='0%';
+  overlay.innerHTML=`
+    <div class="card">
+      <div class="sub">— 終 —</div>
+      <h1 style="font-size:28px;margin-bottom:8px">挑戰結束</h1>
+      <div class="final">${score}</div>
+      <div class="final-lbl">總得分</div>
+      <div class="stats">
+        <div><span>最高連擊</span><b>${maxCombo}</b></div>
+        <div><span>連打</span><b>${stats.roll}</b></div>
+        <div><span>良</span><b>${stats.great}</b></div>
+        <div><span>可</span><b>${stats.ok}</b></div>
+        <div><span>不可</span><b>${stats.miss}</b></div>
+      </div>
+      <button class="btn" id="restart-btn">再玩一次</button>
+    </div>`;
+  overlay.style.display='flex';
+  onTap($('restart-btn'),beginCountdown);
+}
+
+showStart();
+})();
+</script>
+</body>
+</html>
